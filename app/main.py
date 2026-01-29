@@ -6,7 +6,8 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.config.settings import get_settings
-from app.routes import health
+from app.config.database import init_db
+from app.routes import health, files
 
 # Configure logging
 logging.basicConfig(
@@ -24,6 +25,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Media Mind AI Backend...")
     logger.info(f"Environment: {settings.environment}")
+    # Initialize database
+    await init_db()
+    logger.info("Database initialized")
     yield
     # Shutdown
     logger.info("Shutting down Media Mind AI Backend...")
@@ -50,6 +54,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
+app.include_router(files.router, prefix="/api/v1/files", tags=["Files"])
 
 
 @app.get("/")
