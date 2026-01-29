@@ -8,6 +8,9 @@ A production-ready FastAPI backend for an AI-powered document and multimedia Q&A
 - 📁 Modular architecture (routes, services, models, schemas, config)
 - 🔐 Environment variable configuration
 - 🏥 Health check endpoints (health, readiness, liveness)
+- 📤 File upload system (PDF, audio, video) with metadata storage
+- 💾 SQLite database with SQLAlchemy async ORM
+- 📂 Structured file storage with organized folders
 - 🌐 CORS middleware support
 - 📝 Auto-generated API documentation
 - 🔒 Production-ready settings
@@ -21,16 +24,30 @@ media-mind-ai/
 │   ├── main.py              # FastAPI application entry point
 │   ├── config/
 │   │   ├── __init__.py
-│   │   └── settings.py      # Environment configuration
+│   │   ├── settings.py      # Environment configuration
+│   │   └── database.py      # Database configuration
 │   ├── routes/
 │   │   ├── __init__.py
-│   │   └── health.py        # Health check endpoints
+│   │   ├── health.py        # Health check endpoints
+│   │   └── files.py         # File upload endpoints
 │   ├── services/
-│   │   └── __init__.py      # Business logic layer
+│   │   ├── __init__.py
+│   │   └── file_service.py  # File storage service
 │   ├── models/
-│   │   └── __init__.py      # Database models
+│   │   ├── __init__.py
+│   │   └── file.py          # File metadata model
 │   └── schemas/
-│       └── __init__.py      # Pydantic schemas
+│       ├── __init__.py
+│       ├── health.py        # Health check schemas
+│       └── file.py          # File upload schemas
+├── uploads/                 # File storage directory (created automatically)
+│   ├── pdfs/
+│   ├── audio/
+│   ├── video/
+│   ├── images/
+│   ├── documents/
+│   └── other/
+├── media_mind.db            # SQLite database (created automatically)
 ├── requirements.txt
 ├── .env.example
 ├── .gitignore
@@ -78,6 +95,16 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 - `GET /api/v1/health/ready` - Readiness check
 - `GET /api/v1/health/live` - Liveness check
 
+### File Upload & Management
+
+- `POST /api/v1/files/upload` - Upload a single file (PDF, audio, video)
+- `POST /api/v1/files/upload/multiple` - Upload multiple files at once
+- `GET /api/v1/files/list` - List all files with pagination
+  - Query params: `file_type` (optional), `page`, `page_size`
+- `GET /api/v1/files/{file_id}` - Get file metadata by ID
+- `GET /api/v1/files/{file_id}/download` - Download a file by ID
+- `DELETE /api/v1/files/{file_id}` - Delete a file and its metadata
+
 ### Documentation
 
 - `GET /docs` - Swagger UI documentation (disabled in production)
@@ -96,16 +123,40 @@ Key variables:
 
 The application uses:
 - **FastAPI** for the web framework
+- **SQLAlchemy** with async support for database operations
+- **SQLite** (default) or PostgreSQL for data storage
 - **Pydantic Settings** for configuration management
 - **Uvicorn** as the ASGI server
 
+## File Storage
+
+Files are stored in the `uploads/` directory with the following structure:
+- `uploads/pdfs/` - PDF documents
+- `uploads/audio/` - Audio files (mp3, wav, etc.)
+- `uploads/video/` - Video files (mp4, avi, etc.)
+- `uploads/images/` - Image files
+- `uploads/documents/` - Other document types
+- `uploads/other/` - Unrecognized file types
+
+All file metadata (filename, type, size, upload time) is stored in the database.
+
+## Database
+
+The application uses SQLite by default (stored in `media_mind.db`). To use PostgreSQL, set the `DATABASE_URL` environment variable:
+
+```
+DATABASE_URL=postgresql+asyncpg://user:password@localhost/dbname
+```
+
+The database is automatically initialized on application startup.
+
 ## Next Steps
 
-1. Add database models in `app/models/`
-2. Create API schemas in `app/schemas/`
-3. Implement business logic in `app/services/`
-4. Add new routes in `app/routes/`
-5. Configure database connection in `app/config/settings.py`
+1. Add AI/ML integration for document processing
+2. Implement Q&A endpoints
+3. Add user authentication
+4. Add file processing pipelines
+5. Implement search functionality
 
 ## License
 
