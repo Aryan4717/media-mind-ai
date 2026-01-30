@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { askQuestion, askQuestionAboutFile, askQuestionStreaming, askQuestionAboutFileStreaming } from '../services/api';
+import { askQuestion, askQuestionAboutFile, askQuestionStreaming, askQuestionAboutFileStreaming, getPlaybackInfo } from '../services/api';
 import './ChatArea.css';
 
-const ChatArea = ({ selectedFileId }) => {
+const ChatArea = ({ selectedFileId, onPlayTimestamp }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -222,11 +222,47 @@ const ChatArea = ({ selectedFileId }) => {
                     <strong>⏱️ Timestamps:</strong>
                     <div className="timestamps-list">
                       {message.timestamps.map((ts, idx) => (
-                        <span key={idx} className="timestamp-badge">
-                          {ts.formatted_start} - {ts.formatted_end}
-                        </span>
+                        <button
+                          key={idx}
+                          className="timestamp-badge play-segment-button"
+                          onClick={() => {
+                            if (onPlayTimestamp) {
+                              onPlayTimestamp(ts.start);
+                            }
+                          }}
+                          title="Play relevant segment"
+                        >
+                          ▶️ {ts.formatted_start} - {ts.formatted_end}
+                        </button>
                       ))}
                     </div>
+                  </div>
+                )}
+                {message.sources && message.sources.some(s => s.timestamps && s.timestamps.length > 0) && (
+                  <div className="message-source-timestamps">
+                    {message.sources
+                      .filter(s => s.timestamps && s.timestamps.length > 0)
+                      .map((source, sourceIdx) => (
+                        <div key={sourceIdx} className="source-timestamps-group">
+                          <strong>Source {sourceIdx + 1} segments:</strong>
+                          <div className="timestamps-list">
+                            {source.timestamps.map((ts, tsIdx) => (
+                              <button
+                                key={tsIdx}
+                                className="timestamp-badge play-segment-button"
+                                onClick={() => {
+                                  if (onPlayTimestamp) {
+                                    onPlayTimestamp(ts.start);
+                                  }
+                                }}
+                                title="Play relevant segment"
+                              >
+                                ▶️ {ts.formatted_start} - {ts.formatted_end}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                   </div>
                 )}
                 {message.error && (

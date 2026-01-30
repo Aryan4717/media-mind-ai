@@ -8,6 +8,7 @@ import './App.css';
 function App() {
   const [selectedFileId, setSelectedFileId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [playTimestamp, setPlayTimestamp] = useState(null);
 
   const handleFileSelect = async (fileId) => {
     setSelectedFileId(fileId);
@@ -24,11 +25,21 @@ function App() {
     }
   };
 
+  const handlePlayTimestamp = (timestamp) => {
+    setPlayTimestamp(timestamp);
+    // Reset after a moment to allow re-triggering
+    setTimeout(() => setPlayTimestamp(null), 100);
+  };
+
   return (
     <div className="app">
       <Sidebar onFileSelect={handleFileSelect} selectedFileId={selectedFileId} />
-      <ChatArea selectedFileId={selectedFileId} />
-      <SummarySection selectedFileId={selectedFileId} selectedFile={selectedFile} />
+      <ChatArea selectedFileId={selectedFileId} onPlayTimestamp={handlePlayTimestamp} />
+      <SummarySection 
+        selectedFileId={selectedFileId} 
+        selectedFile={selectedFile}
+        jumpToTimestamp={playTimestamp}
+      />
     </div>
   );
 }

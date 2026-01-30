@@ -341,11 +341,46 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  border: none;
 }
 
 .timestamp-badge:hover {
   background: #0056b3;
   color: white;
+}
+
+.play-segment-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.play-segment-button:hover {
+  transform: scale(1.05);
+}
+
+.message-source-timestamps {
+  margin-top: 12px;
+  padding: 12px;
+  background: #1e1e1e;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.source-timestamps-group {
+  margin-bottom: 8px;
+}
+
+.source-timestamps-group:last-child {
+  margin-bottom: 0;
+}
+
+.source-timestamps-group strong {
+  color: #fff;
+  font-size: 12px;
+  display: block;
+  margin-bottom: 6px;
 }
 
 .message-error {
