@@ -169,7 +169,7 @@ jobs:
       
       - name: Test Docker Compose
         run: |
-          docker-compose config
+          docker compose config
           echo "Docker Compose configuration is valid"
 
   # Integration test with Docker Compose
@@ -198,7 +198,7 @@ jobs:
       
       - name: Set up Docker Compose
         run: |
-          docker-compose --version
+          docker compose version
       
       - name: Clean up Docker before tests
         run: |
@@ -207,22 +207,22 @@ jobs:
       
       - name: Start services
         run: |
-          docker-compose up -d postgres redis
+          docker compose up -d postgres redis
           sleep 10
-          docker-compose ps
+          docker compose ps
       
       - name: Wait for services to be healthy
         run: |
-          timeout 60 bash -c "until docker-compose exec -T postgres pg_isready -U $POSTGRES_USER; do sleep 2; done"
-          timeout 60 bash -c 'until docker-compose exec -T redis redis-cli ping; do sleep 2; done'
+          timeout 60 bash -c "until docker compose exec -T postgres pg_isready -U $POSTGRES_USER; do sleep 2; done"
+          timeout 60 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 2; done'
       
       - name: Run integration tests
         run: |
           echo "Integration tests would run here"
-          docker-compose ps
+          docker compose ps
       
       - name: Cleanup
         if: always()
         run: |
-          docker-compose down -v
+          docker compose down -v
 
