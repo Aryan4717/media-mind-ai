@@ -5,6 +5,7 @@ import {
   getPlaybackInfo,
   extractTimestamps,
 } from '../services/api';
+import MediaPlayer from './MediaPlayer';
 import './SummarySection.css';
 
 const SummarySection = ({ selectedFileId, selectedFile }) => {
@@ -13,6 +14,7 @@ const SummarySection = ({ selectedFileId, selectedFile }) => {
   const [timestamps, setTimestamps] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('summary');
+  const [localJumpToTimestamp, setLocalJumpToTimestamp] = useState(null);
 
   useEffect(() => {
     if (selectedFileId) {
@@ -53,14 +55,20 @@ const SummarySection = ({ selectedFileId, selectedFile }) => {
 
   const handlePlayTimestamp = async (startTime) => {
     try {
-      const response = await getPlaybackInfo(selectedFileId, startTime);
-      // In a real app, you'd use this to control a media player
-      console.log('Playback info:', response.data);
-      alert(`Playback URL: ${response.data.file_url}\nStart time: ${response.data.formatted_timestamp}`);
+      setLocalJumpToTimestamp(startTime);
+      // Reset after a moment to allow re-triggering
+      setTimeout(() => setLocalJumpToTimestamp(null), 100);
     } catch (error) {
       console.error('Error getting playback info:', error);
     }
   };
+
+  useEffect(() => {
+    if (jumpToTimestamp !== null && jumpToTimestamp !== undefined) {
+      setLocalJumpToTimestamp(jumpToTimestamp);
+      setTimeout(() => setLocalJumpToTimestamp(null), 100);
+    }
+  }, [jumpToTimestamp]);
 
   const handleExtractTimestamps = async (text) => {
     if (!text.trim()) return;
@@ -87,6 +95,14 @@ const SummarySection = ({ selectedFileId, selectedFile }) => {
 
   return (
     <div className="summary-section">
+      {(selectedFile?.file_type === 'audio' || selectedFile?.file_type === 'video') && (
+        <MediaPlayer
+          fileId={selectedFileId}
+          fileType={selectedFile?.file_type}
+          fileName={selectedFile?.original_filename}
+          onTimestampJump={localJumpToTimestamp}
+        />
+      )}
       <div className="summary-header">
         <div className="tabs">
           <button
