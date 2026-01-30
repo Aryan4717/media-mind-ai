@@ -1,0 +1,15 @@
+# Production docker-compose override
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+services:
+  backend:
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+    # Add production-specific configurations here
+    # e.g., resource limits, logging, etc.
+
+  frontend:
+    # Add production-specific configurations here
+    # e.g., resource limits, etc.
+

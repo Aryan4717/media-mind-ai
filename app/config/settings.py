@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     ]
     
     # Security
-    secret_key: str = "your-secret-key-change-in-production"
+    secret_key: str = ""  # Must be set via SECRET_KEY environment variable
     access_token_expire_minutes: int = 30
     
     model_config = SettingsConfigDict(
