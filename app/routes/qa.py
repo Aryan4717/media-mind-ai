@@ -7,7 +7,7 @@ import json
 
 from app.config.database import get_db
 from app.services.rag_service import RAGService
-from app.schemas.qa import QuestionRequest, AnswerResponse, SourceInfo
+from app.schemas.qa import QuestionRequest, AnswerResponse, SourceInfo, TimestampInfo
 
 router = APIRouter()
 
@@ -41,22 +41,57 @@ async def ask_question(
             temperature=request.temperature
         )
         
-        return AnswerResponse(
-            answer=result["answer"],
-            sources=[
+        # Convert timestamps if present
+        timestamps = None
+        if result.get("timestamps"):
+            timestamps = [
+                TimestampInfo(
+                    start=ts["start"],
+                    end=ts["end"],
+                    text=ts["text"],
+                    duration=ts["duration"],
+                    formatted_start=ts["formatted_start"],
+                    formatted_end=ts["formatted_end"]
+                )
+                for ts in result["timestamps"]
+            ]
+        
+        # Convert sources with timestamps
+        sources_list = []
+        for s in result["sources"]:
+            source_timestamps = None
+            if s.get("timestamps"):
+                source_timestamps = [
+                    TimestampInfo(
+                        start=ts["start"],
+                        end=ts["end"],
+                        text=ts["text"],
+                        duration=ts["duration"],
+                        formatted_start=ts["formatted_start"],
+                        formatted_end=ts["formatted_end"]
+                    )
+                    for ts in s["timestamps"]
+                ]
+            
+            sources_list.append(
                 SourceInfo(
                     chunk_id=s["chunk_id"],
                     file_id=s["file_id"],
                     chunk_index=s["chunk_index"],
                     text_preview=s["text_preview"],
                     score=s["score"],
-                    page_number=s.get("page_number")
+                    page_number=s.get("page_number"),
+                    timestamps=source_timestamps
                 )
-                for s in result["sources"]
-            ],
+            )
+        
+        return AnswerResponse(
+            answer=result["answer"],
+            sources=sources_list,
             confidence=result["confidence"],
             chunks_used=result["chunks_used"],
-            model=result["model"]
+            model=result["model"],
+            timestamps=timestamps
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -136,22 +171,57 @@ async def ask_question_about_file(
             temperature=request.temperature
         )
         
-        return AnswerResponse(
-            answer=result["answer"],
-            sources=[
+        # Convert timestamps if present
+        timestamps = None
+        if result.get("timestamps"):
+            timestamps = [
+                TimestampInfo(
+                    start=ts["start"],
+                    end=ts["end"],
+                    text=ts["text"],
+                    duration=ts["duration"],
+                    formatted_start=ts["formatted_start"],
+                    formatted_end=ts["formatted_end"]
+                )
+                for ts in result["timestamps"]
+            ]
+        
+        # Convert sources with timestamps
+        sources_list = []
+        for s in result["sources"]:
+            source_timestamps = None
+            if s.get("timestamps"):
+                source_timestamps = [
+                    TimestampInfo(
+                        start=ts["start"],
+                        end=ts["end"],
+                        text=ts["text"],
+                        duration=ts["duration"],
+                        formatted_start=ts["formatted_start"],
+                        formatted_end=ts["formatted_end"]
+                    )
+                    for ts in s["timestamps"]
+                ]
+            
+            sources_list.append(
                 SourceInfo(
                     chunk_id=s["chunk_id"],
                     file_id=s["file_id"],
                     chunk_index=s["chunk_index"],
                     text_preview=s["text_preview"],
                     score=s["score"],
-                    page_number=s.get("page_number")
+                    page_number=s.get("page_number"),
+                    timestamps=source_timestamps
                 )
-                for s in result["sources"]
-            ],
+            )
+        
+        return AnswerResponse(
+            answer=result["answer"],
+            sources=sources_list,
             confidence=result["confidence"],
             chunks_used=result["chunks_used"],
-            model=result["model"]
+            model=result["model"],
+            timestamps=timestamps
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

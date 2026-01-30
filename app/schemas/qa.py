@@ -25,6 +25,29 @@ class QuestionRequest(BaseModel):
         }
 
 
+class TimestampInfo(BaseModel):
+    """Schema for timestamp information."""
+    
+    start: float = Field(..., description="Start time in seconds")
+    end: float = Field(..., description="End time in seconds")
+    text: str = Field(..., description="Segment text")
+    duration: float = Field(..., description="Duration in seconds")
+    formatted_start: str = Field(..., description="Formatted start time (HH:MM:SS)")
+    formatted_end: str = Field(..., description="Formatted end time (HH:MM:SS)")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "start": 10.5,
+                "end": 25.3,
+                "text": "This is the transcript segment...",
+                "duration": 14.8,
+                "formatted_start": "00:10.500",
+                "formatted_end": "00:25.300"
+            }
+        }
+
+
 class SourceInfo(BaseModel):
     """Schema for source chunk information."""
     
@@ -34,6 +57,7 @@ class SourceInfo(BaseModel):
     text_preview: str
     score: float
     page_number: Optional[int] = None
+    timestamps: Optional[List[TimestampInfo]] = None
     
     class Config:
         json_schema_extra = {
@@ -56,6 +80,7 @@ class AnswerResponse(BaseModel):
     confidence: float = Field(..., description="Average confidence score (0-1)")
     chunks_used: int
     model: str
+    timestamps: Optional[List[TimestampInfo]] = Field(None, description="Timestamps for audio/video files")
     
     class Config:
         json_schema_extra = {
