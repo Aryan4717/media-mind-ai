@@ -11,6 +11,8 @@ A production-ready FastAPI backend for an AI-powered document and multimedia Q&A
 - 📤 File upload system (PDF, audio, video) with metadata storage
 - 🎙️ Audio/Video transcription using OpenAI Whisper (API or local)
 - 📝 Timestamped transcription segments with full text
+- 📄 PDF text extraction and intelligent chunking
+- 🔍 Document chunks ready for embedding and search
 - 💾 SQLite database with SQLAlchemy async ORM
 - 📂 Structured file storage with organized folders
 - 🌐 CORS middleware support
@@ -116,6 +118,15 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 - `GET /api/v1/transcriptions/{transcription_id}` - Get transcription by ID
 - `DELETE /api/v1/transcriptions/{transcription_id}` - Delete a transcription
 
+### Document Processing (PDF)
+
+- `POST /api/v1/files/{file_id}/process` - Extract text from PDF and split into chunks
+  - Body: `{"chunk_size": 1000, "chunk_overlap": 200, "strategy": "sentence"}` (optional)
+- `GET /api/v1/files/{file_id}/chunks` - Get all chunks for a PDF file
+  - Query params: `limit`, `offset` (for pagination)
+- `GET /api/v1/chunks/{chunk_id}` - Get a specific chunk by ID
+- `DELETE /api/v1/files/{file_id}/chunks` - Delete all chunks for a file
+
 ### Documentation
 
 - `GET /docs` - Swagger UI documentation (disabled in production)
@@ -164,6 +175,56 @@ The transcription service supports both OpenAI Whisper API and local Whisper mod
 - **Language detection** (auto-detect or specify)
 - **Translation support** (translate to English)
 - **Linked to files** in database for easy retrieval
+
+## PDF Processing Service
+
+The PDF processing service extracts text from PDFs and splits it into chunks for embedding and search:
+
+### Features
+- **Text extraction** from PDF files using pdfplumber
+- **Intelligent chunking** with multiple strategies:
+  - **Fixed size**: Split into fixed character chunks
+  - **Sentence-based**: Split at sentence boundaries
+  - **Paragraph-based**: Split at paragraph boundaries
+- **Overlap support** to maintain context between chunks
+- **Token counting** for embedding preparation
+- **Metadata tracking** (page numbers, character positions)
+
+### Chunking Strategies
+
+1. **Fixed** (default): Splits text into fixed-size chunks with word boundary awareness
+2. **Sentence**: Splits at sentence boundaries, maintaining semantic coherence
+3. **Paragraph**: Splits at paragraph boundaries, preserving document structure
+
+### Configuration
+
+Set in `.env`:
+- `CHUNK_SIZE`: Characters per chunk (default: 1000)
+- `CHUNK_OVERLAP`: Character overlap between chunks (default: 200)
+- `CHUNKING_STRATEGY`: Strategy to use (default: "fixed")
+
+### Usage Example
+
+```bash
+# 1. Upload a PDF file
+POST /api/v1/files/upload
+
+# 2. Process the PDF into chunks
+POST /api/v1/files/{file_id}/process
+{
+  "chunk_size": 1000,
+  "chunk_overlap": 200,
+  "strategy": "sentence"
+}
+
+# 3. Retrieve chunks for embedding/search
+GET /api/v1/files/{file_id}/chunks
+```
+
+The chunks are stored in the database and ready for:
+- **Embedding generation** (using OpenAI or other embedding models)
+- **Vector search** (semantic search across documents)
+- **RAG (Retrieval-Augmented Generation)** applications
 
 ## File Storage
 
