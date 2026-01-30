@@ -24,9 +24,15 @@ class Settings(BaseSettings):
     # Database
     database_url: str = ""  # Defaults to SQLite if empty
     
-    # AI/ML Services (for future use)
+    # AI/ML Services
     openai_api_key: str = ""
     embedding_model: str = "text-embedding-ada-002"
+    
+    # Transcription Service
+    whisper_model: str = "base"  # Options: tiny, base, small, medium, large
+    use_openai_whisper_api: bool = False  # Use OpenAI API instead of local Whisper
+    transcription_language: str = ""  # Auto-detect if empty, or specify language code (e.g., "en", "es")
+    transcription_task: str = "transcribe"  # "transcribe" or "translate"
     
     # File Storage
     max_file_size_mb: int = 100
