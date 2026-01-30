@@ -160,6 +160,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 - `POST /api/v1/files/{file_id}/summarize/custom` - Generate a summary with a custom prompt
   - Body: `{"custom_prompt": "Summarize key points as bullet points", "model": "gpt-4o-mini", "temperature": 0.7}` (optional)
 
+### Timestamp Extraction
+
+- `POST /api/v1/files/{file_id}/timestamps` - Extract timestamps for text from audio/video transcript
+  - Body: `{"text": "Text to find in transcript"}`
+- Q&A responses automatically include timestamps for audio/video files
+
 ### Documentation
 
 - `GET /docs` - Swagger UI documentation (disabled in production)

@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import get_settings
 from app.services.semantic_search_service import SemanticSearchService
+from app.services.timestamp_service import TimestampService
+from app.models.file import FileType
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -146,27 +148,76 @@ Answer:"""
             answer = response.choices[0].message.content.strip()
             
             # Prepare sources
-            sources = [
-                {
+            sources = []
+            all_timestamps = []
+            
+            for result in search_results:
+                source_info = {
                     "chunk_id": result["chunk_id"],
                     "file_id": result["file_id"],
                     "chunk_index": result["chunk_index"],
                     "text_preview": result["text"][:200] + "..." if len(result["text"]) > 200 else result["text"],
                     "score": result["score"],
-                    "page_number": result.get("page_number")
+                    "page_number": result.get("page_number"),
+                    "timestamps": None
                 }
-                for result in search_results
-            ]
+                
+                # Extract timestamps for audio/video files
+                try:
+                    # Check if this is an audio/video file
+                    from app.services.file_service import FileService
+                    file_meta = await FileService.get_file_by_id(result["file_id"], db)
+                    
+                    if file_meta and file_meta.file_type in [FileType.AUDIO, FileType.VIDEO]:
+                        # Extract timestamps for this chunk's text
+                        chunk_timestamps = await TimestampService.extract_timestamps_for_text(
+                            result["file_id"],
+                            result["text"],
+                            db
+                        )
+                        
+                        # Format timestamps
+                        formatted_timestamps = [
+                            {
+                                "start": ts["start"],
+                                "end": ts["end"],
+                                "text": ts["text"],
+                                "duration": ts["duration"],
+                                "formatted_start": TimestampService.format_timestamp(ts["start"]),
+                                "formatted_end": TimestampService.format_timestamp(ts["end"])
+                            }
+                            for ts in chunk_timestamps
+                        ]
+                        
+                        source_info["timestamps"] = formatted_timestamps
+                        all_timestamps.extend(formatted_timestamps)
+                except Exception as e:
+                    logger.warning(f"Could not extract timestamps for file {result['file_id']}: {str(e)}")
+                
+                sources.append(source_info)
             
             # Calculate average confidence from search scores
             avg_confidence = sum(r["score"] for r in search_results) / len(search_results) if search_results else 0.0
+            
+            # Remove duplicate timestamps (same start/end)
+            unique_timestamps = []
+            seen = set()
+            for ts in all_timestamps:
+                key = (ts["start"], ts["end"])
+                if key not in seen:
+                    seen.add(key)
+                    unique_timestamps.append(ts)
+            
+            # Sort timestamps by start time
+            unique_timestamps.sort(key=lambda x: x["start"])
             
             return {
                 "answer": answer,
                 "sources": sources,
                 "confidence": round(avg_confidence, 3),
                 "chunks_used": len(search_results),
-                "model": model
+                "model": model,
+                "timestamps": unique_timestamps if unique_timestamps else None
             }
             
         except ImportError:

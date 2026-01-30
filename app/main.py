@@ -7,7 +7,7 @@ import logging
 
 from app.config.settings import get_settings
 from app.config.database import init_db
-from app.routes import health, files, transcription, document_processing, vector_search, qa, summarization
+from app.routes import health, files, transcription, document_processing, vector_search, qa, summarization, timestamp_extraction
 
 # Configure logging
 logging.basicConfig(
@@ -60,6 +60,7 @@ app.include_router(document_processing.router, prefix="/api/v1", tags=["Document
 app.include_router(vector_search.router, prefix="/api/v1", tags=["Vector Search"])
 app.include_router(qa.router, prefix="/api/v1", tags=["Q&A Chatbot"])
 app.include_router(summarization.router, prefix="/api/v1", tags=["Summarization"])
+app.include_router(timestamp_extraction.router, prefix="/api/v1", tags=["Timestamp Extraction"])
 
 
 @app.get("/")
