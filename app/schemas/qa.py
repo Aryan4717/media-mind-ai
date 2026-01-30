@@ -1,6 +1,6 @@
 """Q&A request and response schemas."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any
 
 
@@ -13,8 +13,8 @@ class QuestionRequest(BaseModel):
     model: Optional[str] = Field(None, description="LLM model to use (defaults to settings)")
     temperature: Optional[float] = Field(None, ge=0.0, le=2.0, description="Temperature for LLM generation")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "question": "What is machine learning?",
                 "file_id": None,
@@ -23,6 +23,7 @@ class QuestionRequest(BaseModel):
                 "temperature": 0.7
             }
         }
+    )
 
 
 class TimestampInfo(BaseModel):
@@ -35,8 +36,8 @@ class TimestampInfo(BaseModel):
     formatted_start: str = Field(..., description="Formatted start time (HH:MM:SS)")
     formatted_end: str = Field(..., description="Formatted end time (HH:MM:SS)")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "start": 10.5,
                 "end": 25.3,
@@ -46,6 +47,7 @@ class TimestampInfo(BaseModel):
                 "formatted_end": "00:25.300"
             }
         }
+    )
 
 
 class SourceInfo(BaseModel):
@@ -59,8 +61,8 @@ class SourceInfo(BaseModel):
     page_number: Optional[int] = None
     timestamps: Optional[List[TimestampInfo]] = None
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "chunk_id": 1,
                 "file_id": 5,
@@ -70,6 +72,7 @@ class SourceInfo(BaseModel):
                 "page_number": 1
             }
         }
+    )
 
 
 class AnswerResponse(BaseModel):
@@ -82,8 +85,8 @@ class AnswerResponse(BaseModel):
     model: str
     timestamps: Optional[List[TimestampInfo]] = Field(None, description="Timestamps for audio/video files")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "answer": "Machine learning is a subset of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed.",
                 "sources": [
@@ -101,4 +104,4 @@ class AnswerResponse(BaseModel):
                 "model": "gpt-4o-mini"
             }
         }
-
+    )

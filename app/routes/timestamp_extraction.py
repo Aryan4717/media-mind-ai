@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
 from app.config.database import get_db
@@ -17,12 +17,13 @@ class ExtractTimestampsRequest(BaseModel):
     
     text: str = Field(..., description="Text to find timestamps for")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "text": "This is the text to find in the transcript"
             }
         }
+    )
 
 
 class ExtractTimestampsResponse(BaseModel):
@@ -33,8 +34,8 @@ class ExtractTimestampsResponse(BaseModel):
     timestamps: List[TimestampInfo]
     total_segments: int
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "file_id": 1,
                 "text": "This is the text to find",
@@ -51,6 +52,7 @@ class ExtractTimestampsResponse(BaseModel):
                 "total_segments": 1
             }
         }
+    )
 
 
 @router.post("/files/{file_id}/timestamps", response_model=ExtractTimestampsResponse)
@@ -121,4 +123,3 @@ async def extract_timestamps_for_answer(
         status_code=501,
         detail="This endpoint requires answer storage. Use /files/{file_id}/timestamps with text parameter instead."
     )
-

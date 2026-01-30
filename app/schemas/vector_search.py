@@ -1,6 +1,6 @@
 """Vector search schemas."""
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 
@@ -11,14 +11,15 @@ class SearchRequest(BaseModel):
     top_k: Optional[int] = Field(None, description="Number of results to return")
     file_id: Optional[int] = Field(None, description="Optional file ID to filter results")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "query": "What is machine learning?",
                 "top_k": 5,
                 "file_id": None
             }
         }
+    )
 
 
 class SearchResult(BaseModel):
@@ -33,8 +34,8 @@ class SearchResult(BaseModel):
     char_count: int
     page_number: Optional[int] = None
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "chunk_id": 1,
                 "file_id": 5,
@@ -46,6 +47,7 @@ class SearchResult(BaseModel):
                 "page_number": 1
             }
         }
+    )
 
 
 class SearchResponse(BaseModel):
@@ -55,8 +57,8 @@ class SearchResponse(BaseModel):
     results: List[SearchResult]
     total_results: int
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "query": "What is machine learning?",
                 "results": [
@@ -74,6 +76,7 @@ class SearchResponse(BaseModel):
                 "total_results": 1
             }
         }
+    )
 
 
 class GenerateEmbeddingsRequest(BaseModel):
@@ -82,13 +85,14 @@ class GenerateEmbeddingsRequest(BaseModel):
     chunk_ids: Optional[List[int]] = Field(None, description="Specific chunk IDs (if not provided, all chunks for file)")
     model: Optional[str] = Field(None, description="Embedding model to use")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "chunk_ids": [1, 2, 3],
                 "model": "text-embedding-ada-002"
             }
         }
+    )
 
 
 class GenerateEmbeddingsResponse(BaseModel):
@@ -97,11 +101,11 @@ class GenerateEmbeddingsResponse(BaseModel):
     embeddings_created: int
     message: str
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "embeddings_created": 10,
                 "message": "Embeddings generated successfully"
             }
         }
-
+    )

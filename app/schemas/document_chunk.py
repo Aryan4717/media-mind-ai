@@ -1,6 +1,6 @@
 """Document chunk schemas."""
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
@@ -20,9 +20,9 @@ class DocumentChunkResponse(BaseModel):
     chunk_metadata: Optional[str] = None
     created_at: datetime
     
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "file_id": 5,
@@ -37,6 +37,7 @@ class DocumentChunkResponse(BaseModel):
                 "created_at": "2024-01-01T12:00:00"
             }
         }
+    )
 
 
 class DocumentChunkListResponse(BaseModel):
@@ -54,14 +55,15 @@ class ProcessPDFRequest(BaseModel):
     chunk_overlap: Optional[int] = Field(None, description="Character overlap between chunks (defaults to settings)")
     strategy: Optional[str] = Field(None, description="Chunking strategy: 'fixed', 'sentence', or 'paragraph'")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "chunk_size": 1000,
                 "chunk_overlap": 200,
                 "strategy": "sentence"
             }
         }
+    )
 
 
 class ProcessPDFResponse(BaseModel):
@@ -73,8 +75,8 @@ class ProcessPDFResponse(BaseModel):
     total_tokens: Optional[int] = None
     message: str
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "file_id": 5,
                 "chunks_created": 15,
@@ -83,4 +85,4 @@ class ProcessPDFResponse(BaseModel):
                 "message": "PDF processed successfully"
             }
         }
-
+    )

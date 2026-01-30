@@ -1,6 +1,6 @@
 """Media playback request and response schemas."""
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 from typing import Optional
 
 
@@ -16,8 +16,8 @@ class PlaybackInfoResponse(BaseModel):
     mime_type: Optional[str] = None
     file_size_mb: float
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "file_id": 1,
                 "file_name": "video.mp4",
@@ -29,6 +29,7 @@ class PlaybackInfoResponse(BaseModel):
                 "file_size_mb": 25.5
             }
         }
+    )
 
 
 class PlaybackRequest(BaseModel):
@@ -36,10 +37,10 @@ class PlaybackRequest(BaseModel):
     
     timestamp: Optional[float] = Field(None, ge=0, description="Start timestamp in seconds (optional)")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "timestamp": 10.5
             }
         }
-
+    )

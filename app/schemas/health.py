@@ -1,6 +1,6 @@
 """Health check response schemas."""
 
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 from datetime import datetime
 from typing import Dict, Any
 
@@ -14,8 +14,8 @@ class HealthResponse(BaseModel):
     version: str
     environment: str
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "healthy",
                 "timestamp": "2024-01-01T00:00:00",
@@ -24,4 +24,4 @@ class HealthResponse(BaseModel):
                 "environment": "development"
             }
         }
-
+    )

@@ -1,6 +1,6 @@
 """Summarization request and response schemas."""
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 from typing import Optional
 
 
@@ -11,14 +11,15 @@ class SummarizeRequest(BaseModel):
     temperature: Optional[float] = Field(None, ge=0.0, le=2.0, description="Temperature for LLM generation")
     max_length: Optional[int] = Field(None, ge=50, description="Maximum summary length in words")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "model": "gpt-4o-mini",
                 "temperature": 0.7,
                 "max_length": 500
             }
         }
+    )
 
 
 class CustomSummarizeRequest(BaseModel):
@@ -28,14 +29,15 @@ class CustomSummarizeRequest(BaseModel):
     model: Optional[str] = Field(None, description="LLM model to use (defaults to settings)")
     temperature: Optional[float] = Field(None, ge=0.0, le=2.0, description="Temperature for LLM generation")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "custom_prompt": "Summarize the key technical concepts and provide a bullet-point list of main topics.",
                 "model": "gpt-4o-mini",
                 "temperature": 0.7
             }
         }
+    )
 
 
 class SummaryResponse(BaseModel):
@@ -51,8 +53,8 @@ class SummaryResponse(BaseModel):
     summary_length: int
     custom_prompt: Optional[str] = None
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "file_id": 1,
                 "file_name": "document.pdf",
@@ -65,4 +67,4 @@ class SummaryResponse(BaseModel):
                 "custom_prompt": None
             }
         }
-
+    )
