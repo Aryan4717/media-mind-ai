@@ -1,0 +1,157 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: media-mind-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    command: >
+      postgres
+      -c ssl=off
+      -c listen_addresses='*'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/pg_hba.conf:/docker-entrypoint-initdb.d/pg_hba.conf:ro
+      - ./docker/init-postgres.sh:/docker-entrypoint-initdb.d/01-init-pg_hba.sh:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - media-mind-network
+    restart: unless-stopped
+
+  # Redis for caching and vector operations
+  redis:
+    image: redis:7-alpine
+    container_name: media-mind-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - media-mind-network
+    restart: unless-stopped
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: media-mind-backend
+    environment:
+      # Application
+      APP_NAME: ${APP_NAME:-Media Mind AI}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      API_VERSION: ${API_VERSION:-v1}
+      
+      # Server
+      HOST: 0.0.0.0
+      PORT: 8000
+      
+      # CORS
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000","http://localhost:80"]}
+      
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      
+      # AI/ML Services
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-ada-002}
+      
+      # Transcription
+      WHISPER_MODEL: ${WHISPER_MODEL:-base}
+      USE_OPENAI_WHISPER_API: ${USE_OPENAI_WHISPER_API:-false}
+      TRANSCRIPTION_LANGUAGE: ${TRANSCRIPTION_LANGUAGE:-}
+      TRANSCRIPTION_TASK: ${TRANSCRIPTION_TASK:-transcribe}
+      
+      # Document Processing
+      CHUNK_SIZE: ${CHUNK_SIZE:-1000}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-200}
+      CHUNKING_STRATEGY: ${CHUNKING_STRATEGY:-fixed}
+      
+      # Vector Search
+      FAISS_INDEX_PATH: /app/faiss_index
+      SEARCH_TOP_K: ${SEARCH_TOP_K:-5}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-100}
+      
+      # LLM / Q&A
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.7}
+      RAG_CONTEXT_CHUNKS: ${RAG_CONTEXT_CHUNKS:-5}
+      RAG_MAX_CONTEXT_LENGTH: ${RAG_MAX_CONTEXT_LENGTH:-4000}
+      
+      # File Storage
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-100}
+      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-["pdf","txt","docx","pptx","xlsx","jpg","jpeg","png","gif","mp4","mp3","wav"]}
+      
+      # Security
+      SECRET_KEY: ${SECRET_KEY}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+    volumes:
+      - uploads_data:/app/uploads
+      - faiss_index_data:/app/faiss_index
+    ports:
+      - "${BACKEND_PORT:-8001}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - media-mind-network
+    restart: unless-stopped
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: media-mind-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - media-mind-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_data:
+    driver: local
+  faiss_index_data:
+    driver: local
+
+networks:
+  media-mind-network:
+    driver: bridge
+

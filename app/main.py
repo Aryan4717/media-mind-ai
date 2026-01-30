@@ -9,14 +9,23 @@ from app.config.settings import get_settings
 from app.config.database import init_db
 from app.routes import health, files, transcription, document_processing, vector_search, qa, summarization, timestamp_extraction, media_playback
 
-# Configure logging
+settings = get_settings()
+
+# Configure logging based on environment
+log_level = logging.DEBUG if settings.debug else logging.INFO
 logging.basicConfig(
-    level=logging.INFO,
+    level=log_level,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-settings = get_settings()
+# Reduce SQLAlchemy verbosity (only show warnings and errors, not INFO)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.dialects").setLevel(logging.WARNING)
+
+# Suppress aiosqlite DEBUG logs (too verbose)
+logging.getLogger("aiosqlite").setLevel(logging.WARNING)
 
 
 @asynccontextmanager

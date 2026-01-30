@@ -10,9 +10,11 @@ settings = get_settings()
 # Use SQLite for simplicity, can be easily switched to PostgreSQL
 database_url = settings.database_url or "sqlite+aiosqlite:///./media_mind.db"
 
+# Only echo SQL queries in debug mode AND if explicitly enabled
+# For cleaner logs, we'll suppress via logging instead
 engine = create_async_engine(
     database_url,
-    echo=settings.debug,
+    echo=False,  # Disable echo, use logging level control instead
     future=True,
 )
 
