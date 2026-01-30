@@ -1,56 +1,129 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { askQuestion, askQuestionAboutFile } from '../services/api';
+import { askQuestion, askQuestionAboutFile, askQuestionStreaming, askQuestionAboutFileStreaming } from '../services/api';
 import './ChatArea.css';
 
 const ChatArea = ({ selectedFileId }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [streaming, setStreaming] = useState(false);
   const messagesEndRef = useRef(null);
+  const streamingMessageRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, streaming]);
 
-  const handleSend = async () => {
+  const handleSend = async (useStreaming = true) => {
     if (!input.trim() || loading) return;
 
     const userMessage = {
+      id: Date.now(),
       role: 'user',
       content: input,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const question = input;
     setInput('');
     setLoading(true);
+    setStreaming(useStreaming);
+
+    // Create placeholder for assistant message
+    const assistantMessageId = Date.now() + 1;
+    const assistantMessage = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      sources: [],
+      timestamps: [],
+      confidence: null,
+      timestamp: new Date(),
+      streaming: useStreaming,
+    };
+
+    setMessages((prev) => [...prev, assistantMessage]);
+    streamingMessageRef.current = assistantMessageId;
 
     try {
-      const response = selectedFileId
-        ? await askQuestionAboutFile(selectedFileId, input)
-        : await askQuestion(input, selectedFileId ? { file_id: selectedFileId } : {});
+      if (useStreaming) {
+        // Use streaming endpoint
+        const onChunk = (data) => {
+          if (data.answer_chunk) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: msg.content + data.answer_chunk }
+                  : msg
+              )
+            );
+          }
 
-      const assistantMessage = {
-        role: 'assistant',
-        content: response.data.answer,
-        sources: response.data.sources || [],
-        timestamps: response.data.timestamps || [],
-        confidence: response.data.confidence,
-        timestamp: new Date(),
-      };
+          if (data.final_response) {
+            const final = data.final_response;
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? {
+                      ...msg,
+                      content: final.answer,
+                      sources: final.sources || [],
+                      timestamps: final.timestamps || [],
+                      confidence: final.confidence,
+                      streaming: false,
+                    }
+                  : msg
+              )
+            );
+            setStreaming(false);
+            setLoading(false);
+          }
+        };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+        if (selectedFileId) {
+          await askQuestionAboutFileStreaming(selectedFileId, question, {}, onChunk);
+        } else {
+          await askQuestionStreaming(question, {}, onChunk);
+        }
+      } else {
+        // Use regular endpoint
+        const response = selectedFileId
+          ? await askQuestionAboutFile(selectedFileId, question)
+          : await askQuestion(question, selectedFileId ? { file_id: selectedFileId } : {});
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: response.data.answer,
+                  sources: response.data.sources || [],
+                  timestamps: response.data.timestamps || [],
+                  confidence: response.data.confidence,
+                  streaming: false,
+                }
+              : msg
+          )
+        );
+        setLoading(false);
+      }
     } catch (error) {
       console.error('Error asking question:', error);
-      const errorMessage = {
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        error: true,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? {
+                ...msg,
+                content: 'Sorry, I encountered an error. Please try again.',
+                error: true,
+                streaming: false,
+              }
+            : msg
+        )
+      );
       setLoading(false);
+      setStreaming(false);
     }
   };
 
@@ -63,6 +136,12 @@ const ChatArea = ({ selectedFileId }) => {
 
   const formatTime = (date) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatTimestamp = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -82,38 +161,94 @@ const ChatArea = ({ selectedFileId }) => {
             <p>Ask questions about your uploaded documents, audio, or video files.</p>
           </div>
         ) : (
-          messages.map((message, index) => (
-            <div key={index} className={`message ${message.role}`}>
-              <div className="message-header">
-                <span className="message-role">
-                  {message.role === 'user' ? 'You' : 'Assistant'}
-                </span>
-                <span className="message-time">{formatTime(message.timestamp)}</span>
+          messages.map((message) => (
+            <div key={message.id} className={`message-bubble ${message.role}`}>
+              <div className="message-avatar">
+                {message.role === 'user' ? '👤' : '🤖'}
               </div>
-              <div className="message-content">{message.content}</div>
-              {message.sources && message.sources.length > 0 && (
-                <div className="message-sources">
-                  <strong>Sources:</strong>
-                  <ul>
-                    {message.sources.slice(0, 3).map((source, idx) => (
-                      <li key={idx}>
-                        File #{source.file_id}, Chunk #{source.chunk_index}
-                        {source.score && ` (${(source.score * 100).toFixed(0)}% match)`}
-                      </li>
-                    ))}
-                  </ul>
+              <div className="message-content-wrapper">
+                <div className="message-header">
+                  <span className="message-role">
+                    {message.role === 'user' ? 'You' : 'Assistant'}
+                  </span>
+                  <span className="message-time">{formatTime(message.timestamp)}</span>
                 </div>
-              )}
-              {message.error && (
-                <div className="message-error">Error: {message.error}</div>
-              )}
+                <div className="message-content">
+                  {message.content || (message.streaming && <span className="typing-indicator">Thinking...</span>)}
+                  {message.streaming && message.content && (
+                    <span className="streaming-cursor">▋</span>
+                  )}
+                </div>
+                {message.sources && message.sources.length > 0 && (
+                  <div className="message-sources">
+                    <div className="sources-header">
+                      <strong>📚 Sources</strong>
+                      {message.confidence && (
+                        <span className="confidence-badge">
+                          {Math.round(message.confidence * 100)}% confidence
+                        </span>
+                      )}
+                    </div>
+                    <div className="sources-list">
+                      {message.sources.slice(0, 3).map((source, idx) => (
+                        <div key={idx} className="source-item">
+                          <div className="source-header">
+                            <span className="source-label">File #{source.file_id}</span>
+                            {source.score && (
+                              <span className="source-score">
+                                {(source.score * 100).toFixed(0)}% match
+                              </span>
+                            )}
+                          </div>
+                          {source.text_preview && (
+                            <div className="source-preview">{source.text_preview}</div>
+                          )}
+                          {source.timestamps && source.timestamps.length > 0 && (
+                            <div className="source-timestamps">
+                              {source.timestamps.map((ts, tsIdx) => (
+                                <span key={tsIdx} className="timestamp-tag">
+                                  {ts.formatted_start} - {ts.formatted_end}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {message.timestamps && message.timestamps.length > 0 && (
+                  <div className="message-timestamps">
+                    <strong>⏱️ Timestamps:</strong>
+                    <div className="timestamps-list">
+                      {message.timestamps.map((ts, idx) => (
+                        <span key={idx} className="timestamp-badge">
+                          {ts.formatted_start} - {ts.formatted_end}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {message.error && (
+                  <div className="message-error">
+                    ⚠️ {message.error || 'An error occurred'}
+                  </div>
+                )}
+              </div>
             </div>
           ))
         )}
-        {loading && (
-          <div className="message assistant">
-            <div className="message-content">
-              <span className="typing-indicator">Thinking...</span>
+        {loading && !streaming && (
+          <div className="message-bubble assistant">
+            <div className="message-avatar">🤖</div>
+            <div className="message-content-wrapper">
+              <div className="message-content">
+                <div className="loading-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -121,26 +256,36 @@ const ChatArea = ({ selectedFileId }) => {
       </div>
 
       <div className="chat-input-container">
-        <textarea
-          className="chat-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Ask a question about your files..."
-          rows={3}
-          disabled={loading}
-        />
-        <button
-          className="send-button"
-          onClick={handleSend}
-          disabled={!input.trim() || loading}
-        >
-          Send
-        </button>
+        <div className="input-wrapper">
+          <textarea
+            className="chat-input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask a question about your files..."
+            rows={1}
+            disabled={loading}
+            style={{ minHeight: '44px', maxHeight: '120px' }}
+          />
+          <button
+            className="send-button"
+            onClick={() => handleSend()}
+            disabled={!input.trim() || loading}
+            title="Send message (Enter)"
+          >
+            {loading ? (
+              <span className="send-button-loading">⏳</span>
+            ) : (
+              <span>➤</span>
+            )}
+          </button>
+        </div>
+        <div className="input-footer">
+          <span className="input-hint">Press Enter to send, Shift+Enter for new line</span>
+        </div>
       </div>
     </div>
   );
 };
 
 export default ChatArea;
-
