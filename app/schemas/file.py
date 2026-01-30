@@ -1,6 +1,6 @@
 """File upload and response schemas."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Optional
 from app.models.file import FileType
@@ -19,9 +19,9 @@ class FileUploadResponse(BaseModel):
     upload_time: datetime
     message: str = "File uploaded successfully"
     
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "filename": "document_20240101_123456.pdf",
@@ -34,6 +34,7 @@ class FileUploadResponse(BaseModel):
                 "message": "File uploaded successfully"
             }
         }
+    )
 
 
 class FileListResponse(BaseModel):
@@ -48,8 +49,7 @@ class FileListResponse(BaseModel):
     mime_type: Optional[str] = None
     upload_time: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FileListPaginated(BaseModel):

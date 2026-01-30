@@ -1,7 +1,7 @@
 """Health check endpoints."""
 
 from fastapi import APIRouter
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict, Any
 
 from app.config.settings import get_settings
@@ -19,7 +19,7 @@ async def health_check() -> Dict[str, Any]:
     """
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "service": settings.app_name,
         "version": "1.0.0",
         "environment": settings.environment
@@ -36,7 +36,7 @@ async def readiness_check() -> Dict[str, str]:
     # Add readiness checks here (e.g., database connectivity, external services)
     return {
         "status": "ready",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(UTC).isoformat()
     }
 
 
@@ -49,6 +49,6 @@ async def liveness_check() -> Dict[str, str]:
     """
     return {
         "status": "alive",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(UTC).isoformat()
     }
 
