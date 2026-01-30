@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     search_top_k: int = 5  # Number of results to return in semantic search
     embedding_batch_size: int = 100  # Batch size for generating embeddings
     
+    # LLM / Q&A
+    llm_model: str = "gpt-4o-mini"  # LLM model for Q&A
+    llm_temperature: float = 0.7  # Temperature for LLM generation
+    rag_context_chunks: int = 5  # Number of chunks to use as context for RAG
+    rag_max_context_length: int = 4000  # Maximum context length in tokens
+    
     # File Storage
     max_file_size_mb: int = 100
     allowed_file_types: List[str] = [

@@ -15,6 +15,8 @@ A production-ready FastAPI backend for an AI-powered document and multimedia Q&A
 - 🔍 Document chunks ready for embedding and search
 - 🎯 Semantic search using OpenAI embeddings and FAISS
 - 📊 Vector similarity search with ranking
+- 💬 LLM-powered Q&A chatbot with RAG
+- 🔍 Answers based only on uploaded document content
 - 💾 SQLite database with SQLAlchemy async ORM
 - 📂 Structured file storage with organized folders
 - 🌐 CORS middleware support
@@ -139,6 +141,15 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
   - Body: `{"chunk_ids": [1, 2, 3], "model": "text-embedding-ada-002"}` (optional)
 - `POST /api/v1/vector-store/rebuild` - Rebuild FAISS vector store index
 - `GET /api/v1/vector-store/status` - Get vector store status
+
+### Q&A Chatbot (RAG)
+
+- `POST /api/v1/ask` - Ask a question and get an answer using RAG
+  - Body: `{"question": "What is machine learning?", "file_id": null, "top_k": 5, "model": "gpt-4o-mini", "temperature": 0.7}` (optional)
+- `POST /api/v1/ask/stream` - Ask a question with streaming response
+  - Body: Same as `/ask` endpoint
+- `POST /api/v1/files/{file_id}/ask` - Ask a question about a specific file
+  - Body: `{"question": "What is this document about?", "top_k": 5}` (optional)
 
 ### Documentation
 
@@ -318,6 +329,102 @@ POST /api/v1/search
 5. **Ranking**: Results are ranked by similarity score (cosine similarity via L2 distance)
 
 The system enables powerful semantic search capabilities for building RAG applications and intelligent document Q&A systems.
+
+## Q&A Chatbot (RAG)
+
+The Q&A chatbot uses Retrieval-Augmented Generation (RAG) to answer questions based only on uploaded document content:
+
+### Features
+- **RAG Architecture**: Combines semantic search with LLM generation
+- **Context-Aware Answers**: Uses retrieved document chunks as context
+- **Source Attribution**: Provides sources for each answer
+- **Confidence Scoring**: Returns confidence scores based on search relevance
+- **Streaming Support**: Optional streaming responses for real-time answers
+- **File-Specific Q&A**: Ask questions about specific files
+
+### How RAG Works
+
+1. **Question Processing**: User asks a question
+2. **Semantic Search**: System retrieves relevant document chunks using vector search
+3. **Context Building**: Retrieved chunks are formatted as context
+4. **LLM Generation**: LLM generates answer based only on the provided context
+5. **Response**: Answer is returned with source citations and confidence score
+
+### Setup
+
+1. **Set OpenAI API Key** (required):
+   ```bash
+   OPENAI_API_KEY=your-api-key-here
+   ```
+
+2. **Configure LLM Model** (optional):
+   ```bash
+   LLM_MODEL=gpt-4o-mini  # or gpt-4, gpt-3.5-turbo, etc.
+   LLM_TEMPERATURE=0.7
+   RAG_CONTEXT_CHUNKS=5
+   ```
+
+3. **Process Documents and Generate Embeddings**:
+   ```bash
+   # Upload and process PDF
+   POST /api/v1/files/upload
+   POST /api/v1/files/{file_id}/process
+   
+   # Generate embeddings
+   POST /api/v1/files/{file_id}/embeddings
+   ```
+
+4. **Ask Questions**:
+   ```bash
+   POST /api/v1/ask
+   {
+     "question": "What is machine learning?",
+     "file_id": null,  # or specific file ID
+     "top_k": 5
+   }
+   ```
+
+### Usage Example
+
+```bash
+# 1. Upload and process a PDF
+POST /api/v1/files/upload
+POST /api/v1/files/1/process
+
+# 2. Generate embeddings
+POST /api/v1/files/1/embeddings
+
+# 3. Ask a question
+POST /api/v1/ask
+{
+  "question": "Explain the main concepts discussed in this document",
+  "top_k": 5
+}
+
+# Response includes:
+# - Answer based on document content
+# - Source chunks with scores
+# - Confidence score
+# - Number of chunks used
+```
+
+### Configuration
+
+Set in `.env`:
+- `OPENAI_API_KEY`: Required for Q&A
+- `LLM_MODEL`: LLM model to use (default: "gpt-4o-mini")
+- `LLM_TEMPERATURE`: Temperature for generation (default: 0.7)
+- `RAG_CONTEXT_CHUNKS`: Number of chunks to use as context (default: 5)
+- `RAG_MAX_CONTEXT_LENGTH`: Maximum context length in tokens (default: 4000)
+
+### Important Notes
+
+- **Document-Only Answers**: The system is configured to answer ONLY based on uploaded documents
+- **No External Knowledge**: If the context doesn't contain enough information, the system will say so
+- **Source Citations**: Each answer includes source chunks with scores for transparency
+- **Confidence Scores**: Higher scores indicate more relevant retrieved chunks
+
+The Q&A chatbot provides intelligent, context-aware answers while ensuring responses are grounded in your uploaded content.
 
 ## File Storage
 
