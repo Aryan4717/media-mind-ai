@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     transcription_language: str = ""  # Auto-detect if empty, or specify language code (e.g., "en", "es")
     transcription_task: str = "transcribe"  # "transcribe" or "translate"
     
+    # Document Processing
+    chunk_size: int = 1000  # Characters per chunk
+    chunk_overlap: int = 200  # Character overlap between chunks
+    chunking_strategy: str = "fixed"  # "fixed" or "sentence" or "paragraph"
+    
     # File Storage
     max_file_size_mb: int = 100
     allowed_file_types: List[str] = [
