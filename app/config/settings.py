@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     chunk_overlap: int = 200  # Character overlap between chunks
     chunking_strategy: str = "fixed"  # "fixed" or "sentence" or "paragraph"
     
+    # Vector Search
+    faiss_index_path: str = "faiss_index"  # Path to store FAISS index
+    search_top_k: int = 5  # Number of results to return in semantic search
+    embedding_batch_size: int = 100  # Batch size for generating embeddings
+    
     # File Storage
     max_file_size_mb: int = 100
     allowed_file_types: List[str] = [
