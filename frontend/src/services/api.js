@@ -68,6 +68,50 @@ export const askQuestionAboutFile = async (fileId, question, options = {}) => {
   return api.post(`/files/${fileId}/ask`, { question, ...options });
 };
 
+// Streaming Q&A
+export const askQuestionStreaming = async (question, options = {}, onChunk) => {
+  const response = await fetch(`${API_BASE_URL}/ask/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ question, ...options }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (onChunk) onChunk(data);
+        } catch (e) {
+          console.error('Error parsing SSE data:', e);
+        }
+      }
+    }
+  }
+};
+
+export const askQuestionAboutFileStreaming = async (fileId, question, options = {}, onChunk) => {
+  // Use the general streaming endpoint with file_id
+  return askQuestionStreaming(question, { file_id: fileId, ...options }, onChunk);
+};
+
 // Summarization
 export const summarizeFile = async (fileId, options = {}) => {
   return api.post(`/files/${fileId}/summarize`, options);
