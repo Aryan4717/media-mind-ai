@@ -1,12 +1,13 @@
 """Transcription endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
 from app.config.database import get_db
 from app.services.transcription_service import TranscriptionService
 from app.services.file_service import FileService
+from app.models.transcription import Transcription
 from app.schemas.transcription import (
     TranscriptionResponse,
     TranscriptionRequest,
@@ -19,8 +20,7 @@ router = APIRouter()
 @router.post("/files/{file_id}/transcribe", response_model=TranscriptionResponse, status_code=201)
 async def transcribe_file(
     file_id: int,
-    request: TranscriptionRequest,
-    background_tasks: BackgroundTasks,
+    request: Optional[TranscriptionRequest] = Body(default=None),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -32,6 +32,10 @@ async def transcribe_file(
     
     Returns transcription with full text and timestamped segments.
     """
+    # Create default request if none provided
+    if request is None:
+        request = TranscriptionRequest()
+    
     # Get file metadata
     file_metadata = await FileService.get_file_by_id(file_id, db)
     
@@ -50,8 +54,8 @@ async def transcribe_file(
         transcription = await TranscriptionService.transcribe_file(
             file_metadata,
             db,
-            language=request.language or None,
-            task=request.task
+            language=request.language if request else None,
+            task=request.task if request else "transcribe"
         )
         
         return TranscriptionResponse(

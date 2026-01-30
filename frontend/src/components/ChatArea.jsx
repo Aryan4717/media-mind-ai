@@ -50,6 +50,58 @@ const ChatArea = ({ selectedFileId, onPlayTimestamp }) => {
       if (useStreaming) {
         // Use streaming endpoint
         const onChunk = (data) => {
+          // Handle content chunks
+          if (data.type === 'content' && data.content) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: msg.content + data.content }
+                  : msg
+              )
+            );
+          }
+
+          // Handle sources
+          if (data.type === 'sources' && data.sources) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? {
+                      ...msg,
+                      sources: data.sources || [],
+                      streaming: false,
+                    }
+                  : msg
+              )
+            );
+            setStreaming(false);
+            setLoading(false);
+          }
+
+          // Handle errors
+          if (data.type === 'error') {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? {
+                      ...msg,
+                      content: data.content || 'An error occurred',
+                      streaming: false,
+                    }
+                  : msg
+              )
+            );
+            setStreaming(false);
+            setLoading(false);
+          }
+
+          // Handle stream completion
+          if (data.type === 'complete') {
+            setStreaming(false);
+            setLoading(false);
+          }
+
+          // Legacy format support (for backward compatibility)
           if (data.answer_chunk) {
             setMessages((prev) =>
               prev.map((msg) =>
@@ -86,6 +138,10 @@ const ChatArea = ({ selectedFileId, onPlayTimestamp }) => {
         } else {
           await askQuestionStreaming(question, {}, onChunk);
         }
+        
+        // Ensure loading state is cleared after streaming completes
+        setStreaming(false);
+        setLoading(false);
       } else {
         // Use regular endpoint
         const response = selectedFileId

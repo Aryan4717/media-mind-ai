@@ -30,6 +30,22 @@ ENV/
 .env
 .env.local
 .env.*.local
+.env*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# FAISS Index
+faiss_index
+faiss_index.json
+
+# Uploads
+uploads/
+
+# Scripts (optional - remove if you want to track open-db.sh)
+# open-db.sh
 
 # IDE
 .vscode/

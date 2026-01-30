@@ -1,5 +1,6 @@
 """File upload and management endpoints."""
 
+import logging
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +12,7 @@ from app.services.file_service import FileService
 from app.schemas.file import FileUploadResponse, FileListResponse, FileListPaginated
 from app.models.file import FileType
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -42,6 +44,7 @@ async def upload_file(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error uploading file {file.filename}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Error uploading file: {str(e)}"

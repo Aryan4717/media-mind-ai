@@ -12,10 +12,21 @@ database_url = settings.database_url or "sqlite+aiosqlite:///./media_mind.db"
 
 # Only echo SQL queries in debug mode AND if explicitly enabled
 # For cleaner logs, we'll suppress via logging instead
+# Configure SQLite for better async handling with longer timeout
+connect_args = {}
+if "sqlite" in database_url:
+    # SQLite-specific configuration for async operations
+    connect_args = {
+        "timeout": 30.0,  # Increase timeout to 30 seconds
+        "check_same_thread": False,  # Allow multi-threaded access
+    }
+
 engine = create_async_engine(
     database_url,
     echo=False,  # Disable echo, use logging level control instead
     future=True,
+    connect_args=connect_args,
+    pool_pre_ping=True,  # Verify connections before using
 )
 
 # Create async session factory

@@ -3,6 +3,8 @@ import {
   summarizeFile,
   getTranscription,
   extractTimestamps,
+  processPDF,
+  transcribeFile,
 } from '../services/api';
 import MediaPlayer from './MediaPlayer';
 import './SummarySection.css';
@@ -18,14 +20,19 @@ const SummarySection = ({ selectedFileId, selectedFile }) => {
   useEffect(() => {
     if (selectedFileId) {
       loadSummary();
-      loadTranscription();
+      // Only load transcription for audio/video files
+      if (selectedFile?.file_type === 'audio' || selectedFile?.file_type === 'video') {
+        loadTranscription();
+      } else {
+        setTranscription(null);
+      }
     } else {
       setSummary(null);
       setTranscription(null);
       setTimestamps([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFileId]);
+  }, [selectedFileId, selectedFile]);
 
   const loadSummary = async () => {
     try {
@@ -34,21 +41,107 @@ const SummarySection = ({ selectedFileId, selectedFile }) => {
       setSummary(response.data);
     } catch (err) {
       console.error('Error loading summary:', err);
-      if (err.response?.status !== 400) {
-        // Don't show error if file just needs processing
-        setSummary(null);
+      const errorMessage = err.response?.data?.detail || err.message;
+      
+      // If file needs processing, try to process/transcribe it first
+      if (err.response?.status === 400 && errorMessage?.includes('process the file first')) {
+        if (selectedFile?.file_type === 'pdf') {
+          try {
+            // Automatically process the PDF
+            await processPDF(selectedFileId);
+            // Retry summarization after processing
+            const response = await summarizeFile(selectedFileId);
+            setSummary(response.data);
+            return;
+          } catch (processErr) {
+            console.error('Error processing PDF:', processErr);
+            alert('Please process the PDF first. Processing failed: ' + (processErr.response?.data?.detail || processErr.message));
+            setSummary(null);
+            return;
+          }
+        } else if (selectedFile?.file_type === 'audio' || selectedFile?.file_type === 'video') {
+          try {
+            // Show transcription in progress
+            setSummary({ summary: 'Transcribing audio file... This may take a few minutes.' });
+            
+            // Automatically transcribe the audio/video file
+            // This can take a long time, especially on first use (model download)
+            await transcribeFile(selectedFileId);
+            
+            // Wait a bit for the transcription to be fully saved
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Reload transcription to verify it's complete
+            await loadTranscription();
+            
+            // Poll for transcription completion if needed
+            let attempts = 0;
+            let transcriptionComplete = false;
+            while (attempts < 10 && !transcriptionComplete) {
+              try {
+                const transResponse = await getTranscription(selectedFileId);
+                if (transResponse.data?.status === 'completed' && transResponse.data?.full_text) {
+                  transcriptionComplete = true;
+                  setTranscription(transResponse.data);
+                  break;
+                }
+                // Wait before next attempt
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                attempts++;
+              } catch (pollErr) {
+                if (pollErr.response?.status === 404) {
+                  // Still processing, wait and retry
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                  attempts++;
+                } else {
+                  throw pollErr;
+                }
+              }
+            }
+            
+            if (!transcriptionComplete) {
+              throw new Error('Transcription is taking longer than expected. Please try again in a moment.');
+            }
+            
+            // Retry summarization after transcription
+            const response = await summarizeFile(selectedFileId);
+            setSummary(response.data);
+            return;
+          } catch (transcribeErr) {
+            console.error('Error transcribing file:', transcribeErr);
+            const errorMsg = transcribeErr.response?.data?.detail || transcribeErr.message;
+            alert('Transcription failed: ' + errorMsg + '\n\nNote: First-time transcription may take several minutes to download the Whisper model.');
+            setSummary(null);
+            return;
+          }
+        }
       }
+      
+      // Show error for other cases
+      if (err.response?.status !== 400) {
+        alert('Error loading summary: ' + errorMessage);
+      }
+      setSummary(null);
     } finally {
       setLoading(false);
     }
   };
 
   const loadTranscription = async () => {
+    // Only load transcription for audio/video files
+    if (selectedFile?.file_type !== 'audio' && selectedFile?.file_type !== 'video') {
+      setTranscription(null);
+      return;
+    }
+    
     try {
       const response = await getTranscription(selectedFileId);
       setTranscription(response.data);
-    } catch {
-      // Transcription might not exist
+    } catch (err) {
+      // Transcription might not exist - silently handle 404
+      if (err.response?.status !== 404) {
+        console.error('Error loading transcription:', err);
+      }
       setTranscription(null);
     }
   };

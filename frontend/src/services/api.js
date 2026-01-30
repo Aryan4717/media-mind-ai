@@ -79,31 +79,46 @@ export const askQuestionStreaming = async (question, options = {}, onChunk) => {
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    const errorText = await response.text();
+    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        // Stream completed - send completion signal if no sources were sent
+        if (onChunk) {
+          onChunk({ type: 'complete' });
+        }
+        break;
+      }
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
 
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        try {
-          const data = JSON.parse(line.slice(6));
-          if (onChunk) onChunk(data);
-        } catch (e) {
-          console.error('Error parsing SSE data:', e);
+      for (const line of lines) {
+        if (line.trim() && line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (onChunk) onChunk(data);
+          } catch (e) {
+            console.error('Error parsing SSE data:', e, 'Line:', line);
+          }
         }
       }
     }
+  } catch (error) {
+    console.error('Error reading stream:', error);
+    if (onChunk) {
+      onChunk({ type: 'error', content: `Stream error: ${error.message}` });
+    }
+    throw error;
   }
 };
 

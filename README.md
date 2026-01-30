@@ -25,6 +25,23 @@ A production-ready AI-powered document and multimedia Q&A system with FastAPI ba
 - 📝 Auto-generated API documentation
 - 🔒 Production-ready settings
 
+## Architecture Documentation
+
+Comprehensive architecture documentation is available to help you understand the system:
+
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Detailed technical architecture with component descriptions, data flows, and design patterns
+- **[ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md)** - Visual diagrams using Mermaid syntax (system architecture, data flows, component interactions)
+- **[ARCHITECTURE_GUIDE.md](./ARCHITECTURE_GUIDE.md)** - Beginner-friendly guide explaining the system like a senior architect to a junior developer
+- **[ARCHITECTURE_QUICK_REFERENCE.md](./ARCHITECTURE_QUICK_REFERENCE.md)** - Quick reference card for interviews and presentations
+
+These documents cover:
+- System architecture and component interactions
+- Data flow diagrams for all major processes
+- Database schema and relationships
+- RAG (Retrieval-Augmented Generation) implementation
+- Service layer details and design patterns
+- Technology stack and design decisions
+
 ## Project Structure
 
 ```
