@@ -7,7 +7,7 @@ import logging
 
 from app.config.settings import get_settings
 from app.config.database import init_db
-from app.routes import health, files, transcription, document_processing
+from app.routes import health, files, transcription, document_processing, vector_search
 
 # Configure logging
 logging.basicConfig(
@@ -57,6 +57,7 @@ app.include_router(health.router, prefix="/api/v1", tags=["Health"])
 app.include_router(files.router, prefix="/api/v1/files", tags=["Files"])
 app.include_router(transcription.router, prefix="/api/v1", tags=["Transcription"])
 app.include_router(document_processing.router, prefix="/api/v1", tags=["Document Processing"])
+app.include_router(vector_search.router, prefix="/api/v1", tags=["Vector Search"])
 
 
 @app.get("/")

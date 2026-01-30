@@ -13,6 +13,8 @@ A production-ready FastAPI backend for an AI-powered document and multimedia Q&A
 - 📝 Timestamped transcription segments with full text
 - 📄 PDF text extraction and intelligent chunking
 - 🔍 Document chunks ready for embedding and search
+- 🎯 Semantic search using OpenAI embeddings and FAISS
+- 📊 Vector similarity search with ranking
 - 💾 SQLite database with SQLAlchemy async ORM
 - 📂 Structured file storage with organized folders
 - 🌐 CORS middleware support
@@ -127,6 +129,17 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 - `GET /api/v1/chunks/{chunk_id}` - Get a specific chunk by ID
 - `DELETE /api/v1/files/{file_id}/chunks` - Delete all chunks for a file
 
+### Vector Search (Semantic Search)
+
+- `POST /api/v1/search` - Perform semantic search over document chunks
+  - Body: `{"query": "search text", "top_k": 5, "file_id": null}` (optional)
+- `POST /api/v1/files/{file_id}/embeddings` - Generate embeddings for all chunks of a file
+  - Body: `{"model": "text-embedding-ada-002"}` (optional)
+- `POST /api/v1/chunks/embeddings` - Generate embeddings for specific chunks
+  - Body: `{"chunk_ids": [1, 2, 3], "model": "text-embedding-ada-002"}` (optional)
+- `POST /api/v1/vector-store/rebuild` - Rebuild FAISS vector store index
+- `GET /api/v1/vector-store/status` - Get vector store status
+
 ### Documentation
 
 - `GET /docs` - Swagger UI documentation (disabled in production)
@@ -225,6 +238,86 @@ The chunks are stored in the database and ready for:
 - **Embedding generation** (using OpenAI or other embedding models)
 - **Vector search** (semantic search across documents)
 - **RAG (Retrieval-Augmented Generation)** applications
+
+## Vector Search Service
+
+The vector search service enables semantic search over document chunks using OpenAI embeddings and FAISS:
+
+### Features
+- **OpenAI Embeddings**: Uses OpenAI's embedding models (text-embedding-ada-002, text-embedding-3-small, etc.)
+- **FAISS Vector Store**: Fast similarity search using Facebook's FAISS library
+- **Semantic Search**: Find relevant chunks based on meaning, not just keywords
+- **Batch Processing**: Efficient embedding generation for multiple chunks
+- **Persistent Index**: FAISS index saved to disk for fast loading
+
+### Setup
+
+1. **Set OpenAI API Key**:
+   ```bash
+   OPENAI_API_KEY=your-api-key-here
+   ```
+
+2. **Install Dependencies**:
+   ```bash
+   pip install faiss-cpu numpy
+   ```
+
+3. **Process PDF and Generate Embeddings**:
+   ```bash
+   # 1. Upload and process PDF
+   POST /api/v1/files/upload
+   POST /api/v1/files/{file_id}/process
+   
+   # 2. Generate embeddings
+   POST /api/v1/files/{file_id}/embeddings
+   ```
+
+4. **Perform Semantic Search**:
+   ```bash
+   POST /api/v1/search
+   {
+     "query": "What is machine learning?",
+     "top_k": 5
+   }
+   ```
+
+### Configuration
+
+Set in `.env`:
+- `EMBEDDING_MODEL`: OpenAI embedding model (default: "text-embedding-ada-002")
+- `FAISS_INDEX_PATH`: Path to store FAISS index (default: "faiss_index")
+- `SEARCH_TOP_K`: Number of results to return (default: 5)
+- `EMBEDDING_BATCH_SIZE`: Batch size for embedding generation (default: 100)
+
+### Usage Example
+
+```bash
+# 1. Upload and process a PDF
+POST /api/v1/files/upload
+POST /api/v1/files/1/process
+
+# 2. Generate embeddings for all chunks
+POST /api/v1/files/1/embeddings
+
+# 3. Search for relevant chunks
+POST /api/v1/search
+{
+  "query": "explain neural networks",
+  "top_k": 3
+}
+
+# Response includes chunks ranked by similarity with scores
+```
+
+### How It Works
+
+1. **Text Extraction**: PDFs are processed into text chunks
+2. **Embedding Generation**: Chunks are converted to vector embeddings using OpenAI
+3. **Index Building**: Embeddings are stored in FAISS for fast similarity search
+4. **Semantic Search**: Query text is embedded and compared against all chunks
+5. **Ranking**: Results are ranked by similarity score (cosine similarity via L2 distance)
+
+The system enables powerful semantic search capabilities for building RAG applications and intelligent document Q&A systems.
 
 ## File Storage
 
