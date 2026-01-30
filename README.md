@@ -17,6 +17,8 @@ A production-ready FastAPI backend for an AI-powered document and multimedia Q&A
 - 📊 Vector similarity search with ranking
 - 💬 LLM-powered Q&A chatbot with RAG
 - 🔍 Answers based only on uploaded document content
+- 📝 Document and transcript summarization using LLM
+- 🎯 Custom summarization prompts for different formats
 - 💾 SQLite database with SQLAlchemy async ORM
 - 📂 Structured file storage with organized folders
 - 🌐 CORS middleware support
@@ -150,6 +152,13 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
   - Body: Same as `/ask` endpoint
 - `POST /api/v1/files/{file_id}/ask` - Ask a question about a specific file
   - Body: `{"question": "What is this document about?", "top_k": 5}` (optional)
+
+### Summarization
+
+- `POST /api/v1/files/{file_id}/summarize` - Generate a summary of a PDF, audio transcript, or video transcript
+  - Body: `{"model": "gpt-4o-mini", "temperature": 0.7, "max_length": 500}` (optional)
+- `POST /api/v1/files/{file_id}/summarize/custom` - Generate a summary with a custom prompt
+  - Body: `{"custom_prompt": "Summarize key points as bullet points", "model": "gpt-4o-mini", "temperature": 0.7}` (optional)
 
 ### Documentation
 
@@ -425,6 +434,66 @@ Set in `.env`:
 - **Confidence Scores**: Higher scores indicate more relevant retrieved chunks
 
 The Q&A chatbot provides intelligent, context-aware answers while ensuring responses are grounded in your uploaded content.
+
+## Summarization Service
+
+The summarization service generates concise summaries of PDFs, audio transcripts, and video transcripts using LLM:
+
+### Features
+- **Multi-format Support**: Summarize PDFs, audio transcripts, and video transcripts
+- **LLM-powered**: Uses OpenAI models for high-quality summaries
+- **Custom Prompts**: Support for custom summarization styles (bullet points, structured format, etc.)
+- **Configurable Length**: Optional maximum summary length
+- **Comprehensive Summaries**: Focuses on main topics, key points, and important details
+
+### Supported File Types
+- **PDFs**: Requires processing first (`/api/v1/files/{file_id}/process`)
+- **Audio Files**: Requires transcription first (`/api/v1/files/{file_id}/transcribe`)
+- **Video Files**: Requires transcription first (`/api/v1/files/{file_id}/transcribe`)
+
+### Usage Example
+
+```bash
+# 1. For PDFs: Upload and process
+POST /api/v1/files/upload
+POST /api/v1/files/1/process
+
+# 2. For Audio/Video: Upload and transcribe
+POST /api/v1/files/upload
+POST /api/v1/files/2/transcribe
+
+# 3. Generate summary
+POST /api/v1/files/1/summarize
+{
+  "model": "gpt-4o-mini",
+  "temperature": 0.7,
+  "max_length": 500
+}
+
+# 4. Custom summary with specific format
+POST /api/v1/files/1/summarize/custom
+{
+  "custom_prompt": "Summarize the key technical concepts and provide a bullet-point list of main topics.",
+  "model": "gpt-4o-mini"
+}
+```
+
+### Configuration
+
+Uses the same LLM settings as Q&A:
+- `OPENAI_API_KEY`: Required for summarization
+- `LLM_MODEL`: LLM model to use (default: "gpt-4o-mini")
+- `LLM_TEMPERATURE`: Temperature for generation (default: 0.7)
+
+### Custom Summarization
+
+You can customize the summarization style using custom prompts:
+- **Bullet Points**: "Summarize as a bullet-point list"
+- **Structured Format**: "Provide a summary with sections: Overview, Key Points, Conclusions"
+- **Technical Focus**: "Summarize focusing on technical concepts and methodologies"
+- **Executive Summary**: "Create an executive summary highlighting main decisions and recommendations"
+
+The summarization service provides intelligent, concise summaries that capture the essence of your documents and transcripts.
 
 ## File Storage
 
