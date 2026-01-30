@@ -17,12 +17,14 @@ const MediaPlayer = ({ fileId, fileType, fileName, onTimestampJump }) => {
     if (fileId && (fileType === 'audio' || fileType === 'video')) {
       loadMediaUrl();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileId, fileType]);
 
   useEffect(() => {
     if (onTimestampJump !== undefined && onTimestampJump !== null) {
       jumpToTimestamp(onTimestampJump);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onTimestampJump]);
 
   const loadMediaUrl = async () => {

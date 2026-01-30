@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { askQuestion, askQuestionAboutFile, askQuestionStreaming, askQuestionAboutFileStreaming, getPlaybackInfo } from '../services/api';
+import { askQuestion, askQuestionAboutFile, askQuestionStreaming, askQuestionAboutFileStreaming } from '../services/api';
 import './ChatArea.css';
 
 const ChatArea = ({ selectedFileId, onPlayTimestamp }) => {
@@ -136,12 +136,6 @@ const ChatArea = ({ selectedFileId, onPlayTimestamp }) => {
 
   const formatTime = (date) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatTimestamp = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (

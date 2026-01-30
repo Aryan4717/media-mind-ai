@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   summarizeFile,
   getTranscription,
-  getPlaybackInfo,
   extractTimestamps,
 } from '../services/api';
 import MediaPlayer from './MediaPlayer';
@@ -25,6 +24,7 @@ const SummarySection = ({ selectedFileId, selectedFile }) => {
       setTranscription(null);
       setTimestamps([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFileId]);
 
   const loadSummary = async () => {
@@ -32,9 +32,9 @@ const SummarySection = ({ selectedFileId, selectedFile }) => {
       setLoading(true);
       const response = await summarizeFile(selectedFileId);
       setSummary(response.data);
-    } catch (error) {
-      console.error('Error loading summary:', error);
-      if (error.response?.status !== 400) {
+    } catch (err) {
+      console.error('Error loading summary:', err);
+      if (err.response?.status !== 400) {
         // Don't show error if file just needs processing
         setSummary(null);
       }
@@ -47,7 +47,7 @@ const SummarySection = ({ selectedFileId, selectedFile }) => {
     try {
       const response = await getTranscription(selectedFileId);
       setTranscription(response.data);
-    } catch (error) {
+    } catch {
       // Transcription might not exist
       setTranscription(null);
     }
@@ -63,12 +63,8 @@ const SummarySection = ({ selectedFileId, selectedFile }) => {
     }
   };
 
-  useEffect(() => {
-    if (jumpToTimestamp !== null && jumpToTimestamp !== undefined) {
-      setLocalJumpToTimestamp(jumpToTimestamp);
-      setTimeout(() => setLocalJumpToTimestamp(null), 100);
-    }
-  }, [jumpToTimestamp]);
+  // This useEffect is for external jumpToTimestamp prop (if needed in future)
+  // Currently using localJumpToTimestamp state instead
 
   const handleExtractTimestamps = async (text) => {
     if (!text.trim()) return;
