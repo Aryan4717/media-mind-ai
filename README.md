@@ -1,6 +1,6 @@
-# Media Mind AI - Backend API
+# Media Mind AI
 
-A production-ready FastAPI backend for an AI-powered document and multimedia Q&A system.
+A production-ready AI-powered document and multimedia Q&A system with FastAPI backend and React frontend.
 
 ## Features
 
@@ -66,36 +66,57 @@ media-mind-ai/
 
 ## Setup
 
-### 1. Create Virtual Environment
+### Backend Setup
 
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+1. **Create Virtual Environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-### 2. Install Dependencies
+2. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-```bash
-pip install -r requirements.txt
-```
+3. **Configure Environment Variables**
+   ```bash
+   cp env.example .env
+   ```
+   Edit `.env` file with your configuration values (especially `OPENAI_API_KEY` for Q&A and embeddings).
 
-### 3. Configure Environment Variables
+4. **Run the Backend**
+   ```bash
+   # Development mode with auto-reload
+   python run.py
+   # OR
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
 
-```bash
-cp .env.example .env
-```
+### Frontend Setup
 
-Edit `.env` file with your configuration values.
+1. **Navigate to Frontend Directory**
+   ```bash
+   cd frontend
+   ```
 
-### 4. Run the Application
+2. **Install Dependencies**
+   ```bash
+   npm install
+   ```
 
-```bash
-# Development mode with auto-reload
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+3. **Configure Environment**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` and set `VITE_API_URL=http://localhost:8000/api/v1`
 
-# Production mode
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
+4. **Run the Frontend**
+   ```bash
+   npm run dev
+   ```
+
+The frontend will be available at `http://localhost:5173` (or the port shown in terminal).
 
 ## API Endpoints
 
