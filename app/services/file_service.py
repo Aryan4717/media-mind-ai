@@ -2,17 +2,22 @@
 
 import os
 import shutil
+import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func as sql_func
+from sqlalchemy import select, delete, func as sql_func
 from sqlalchemy.orm import selectinload
 
 from app.config.settings import get_settings
 from app.models.file import FileMetadata, FileType
+from app.models.transcription import Transcription
+from app.models.document_chunk import DocumentChunk
+from app.models.embedding import ChunkEmbedding
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
@@ -113,59 +118,130 @@ class FileService:
         db: AsyncSession
     ) -> FileMetadata:
         """Save uploaded file and create metadata record."""
-        # Ensure storage directories exist
-        cls._ensure_storage_dirs()
-        
-        # Validate file size
-        file_content = await file.read()
-        file_size = len(file_content)
-        file_size_mb = file_size / (1024 * 1024)
-        
-        if file_size_mb > settings.max_file_size_mb:
+        try:
+            # Ensure storage directories exist
+            cls._ensure_storage_dirs()
+            
+            # Validate filename
+            if not file.filename:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Filename is required"
+                )
+            
+            # Validate file size
+            file_content = await file.read()
+            file_size = len(file_content)
+            
+            if file_size == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="File is empty"
+                )
+            
+            file_size_mb = file_size / (1024 * 1024)
+            
+            if file_size_mb > settings.max_file_size_mb:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"File size ({file_size_mb:.2f} MB) exceeds maximum allowed size ({settings.max_file_size_mb} MB)"
+                )
+            
+            # Determine file type
+            file_type = cls._get_file_type(file.filename, file.content_type)
+            
+            # Check if file type is allowed
+            ext = Path(file.filename).suffix.lower().lstrip('.')
+            if ext not in settings.allowed_file_types and file_type == FileType.OTHER:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File type '{ext}' is not allowed. Allowed types: {', '.join(settings.allowed_file_types)}"
+                )
+            
+            # Generate unique filename
+            unique_filename = cls._generate_filename(file.filename)
+            
+            # Determine storage path
+            type_folder = cls.TYPE_FOLDERS[file_type]
+            file_path = cls.STORAGE_BASE / type_folder / unique_filename
+            
+            # Save file to disk
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                with open(file_path, "wb") as f:
+                    f.write(file_content)
+            except Exception as e:
+                logger.error(f"Error writing file to disk: {str(e)}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to save file to disk: {str(e)}"
+                )
+            
+            # Create metadata record with retry logic for database locks
+            import asyncio
+            max_retries = 3
+            retry_delay = 0.5  # seconds
+            
+            for attempt in range(max_retries):
+                try:
+                    file_metadata = FileMetadata(
+                        filename=unique_filename,
+                        original_filename=file.filename,
+                        file_type=file_type,
+                        file_path=str(file_path),
+                        file_size=file_size,
+                        file_size_mb=round(file_size_mb, 2),
+                        mime_type=file.content_type
+                    )
+                    
+                    db.add(file_metadata)
+                    await db.commit()
+                    await db.refresh(file_metadata)
+                    
+                    return file_metadata
+                except Exception as e:
+                    error_str = str(e).lower()
+                    # Check if it's a database lock error
+                    if "locked" in error_str or "database is locked" in error_str:
+                        if attempt < max_retries - 1:
+                            logger.warning(f"Database locked, retrying ({attempt + 1}/{max_retries})...")
+                            await db.rollback()
+                            await asyncio.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+                            continue
+                        else:
+                            # Final attempt failed
+                            await db.rollback()
+                            if file_path.exists():
+                                try:
+                                    file_path.unlink()
+                                except:
+                                    pass
+                            logger.error(f"Database locked after {max_retries} attempts. Close DB Browser if open.")
+                            raise HTTPException(
+                                status_code=503,
+                                detail="Database is locked. Please close DB Browser for SQLite if it's open and try again."
+                            )
+                    else:
+                        # Other database errors
+                        await db.rollback()
+                        if file_path.exists():
+                            try:
+                                file_path.unlink()
+                            except:
+                                pass
+                        logger.error(f"Error saving file metadata to database: {str(e)}")
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"Failed to save file metadata: {str(e)}"
+                        )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in save_file: {str(e)}", exc_info=True)
             raise HTTPException(
-                status_code=413,
-                detail=f"File size ({file_size_mb:.2f} MB) exceeds maximum allowed size ({settings.max_file_size_mb} MB)"
+                status_code=500,
+                detail=f"Error uploading file: {str(e)}"
             )
-        
-        # Determine file type
-        file_type = cls._get_file_type(file.filename, file.content_type)
-        
-        # Check if file type is allowed
-        ext = Path(file.filename).suffix.lower().lstrip('.')
-        if ext not in settings.allowed_file_types and file_type == FileType.OTHER:
-            raise HTTPException(
-                status_code=400,
-                detail=f"File type '{ext}' is not allowed. Allowed types: {', '.join(settings.allowed_file_types)}"
-            )
-        
-        # Generate unique filename
-        unique_filename = cls._generate_filename(file.filename)
-        
-        # Determine storage path
-        type_folder = cls.TYPE_FOLDERS[file_type]
-        file_path = cls.STORAGE_BASE / type_folder / unique_filename
-        
-        # Save file to disk
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(file_path, "wb") as f:
-            f.write(file_content)
-        
-        # Create metadata record
-        file_metadata = FileMetadata(
-            filename=unique_filename,
-            original_filename=file.filename,
-            file_type=file_type,
-            file_path=str(file_path),
-            file_size=file_size,
-            file_size_mb=round(file_size_mb, 2),
-            mime_type=file.content_type
-        )
-        
-        db.add(file_metadata)
-        await db.commit()
-        await db.refresh(file_metadata)
-        
-        return file_metadata
     
     @classmethod
     async def get_file_by_id(cls, file_id: int, db: AsyncSession) -> Optional[FileMetadata]:
@@ -208,20 +284,55 @@ class FileService:
     
     @classmethod
     async def delete_file(cls, file_id: int, db: AsyncSession) -> bool:
-        """Delete file and its metadata."""
+        """Delete file and all related data (transcriptions, chunks, embeddings)."""
         file_metadata = await cls.get_file_by_id(file_id, db)
         
         if not file_metadata:
             return False
         
-        # Delete file from disk
-        file_path = Path(file_metadata.file_path)
-        if file_path.exists():
-            file_path.unlink()
-        
-        # Delete metadata
-        await db.delete(file_metadata)
-        await db.commit()
-        
-        return True
+        try:
+            # Delete related transcriptions first
+            await db.execute(
+                delete(Transcription).where(Transcription.file_id == file_id)
+            )
+            logger.info(f"Deleted transcriptions for file {file_id}")
+            
+            # Get all chunks for this file to delete their embeddings
+            chunks_result = await db.execute(
+                select(DocumentChunk.id).where(DocumentChunk.file_id == file_id)
+            )
+            chunk_ids = [row[0] for row in chunks_result.fetchall()]
+            
+            # Delete embeddings for these chunks
+            if chunk_ids:
+                await db.execute(
+                    delete(ChunkEmbedding).where(ChunkEmbedding.chunk_id.in_(chunk_ids))
+                )
+                logger.info(f"Deleted embeddings for {len(chunk_ids)} chunks of file {file_id}")
+            
+            # Delete document chunks
+            await db.execute(
+                delete(DocumentChunk).where(DocumentChunk.file_id == file_id)
+            )
+            logger.info(f"Deleted chunks for file {file_id}")
+            
+            # Delete file from disk
+            file_path = Path(file_metadata.file_path)
+            if file_path.exists():
+                try:
+                    file_path.unlink()
+                    logger.info(f"Deleted file from disk: {file_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete file from disk {file_path}: {e}")
+            
+            # Delete file metadata (this will cascade delete any remaining relationships)
+            await db.delete(file_metadata)
+            await db.commit()
+            
+            logger.info(f"Successfully deleted file {file_id} and all related data")
+            return True
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error deleting file {file_id}: {str(e)}")
+            raise
 

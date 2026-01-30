@@ -1,7 +1,8 @@
 """Summarization endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional
 
 from app.config.database import get_db
 from app.services.summarization_service import SummarizationService
@@ -17,7 +18,7 @@ router = APIRouter()
 @router.post("/files/{file_id}/summarize", response_model=SummaryResponse)
 async def summarize_file(
     file_id: int,
-    request: SummarizeRequest,
+    request: Optional[SummarizeRequest] = Body(default=None),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -32,6 +33,10 @@ async def summarize_file(
     - PDFs: Process using `/api/v1/files/{file_id}/process`
     - Audio/Video: Transcribe using `/api/v1/files/{file_id}/transcribe`
     """
+    # Create default request if none provided
+    if request is None:
+        request = SummarizeRequest()
+    
     try:
         result = await SummarizationService.summarize_file(
             file_id=file_id,
