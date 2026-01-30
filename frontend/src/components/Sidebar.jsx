@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { uploadFile, getFiles, deleteFile } from '../services/api';
+import { getFiles, deleteFile } from '../services/api';
 import './Sidebar.css';
 
 const Sidebar = ({ onFileSelect, selectedFileId }) => {
@@ -8,6 +8,7 @@ const Sidebar = ({ onFileSelect, selectedFileId }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [isDragging, setIsDragging] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [dragCounter, setDragCounter] = useState(0);
   const fileInputRef = useRef(null);
   const dropZoneRef = useRef(null);
@@ -50,45 +51,41 @@ const Sidebar = ({ onFileSelect, selectedFileId }) => {
   };
 
   const uploadFileWithProgress = async (file, fileId) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+    const formData = new FormData();
+    formData.append('file', file);
 
-      const xhr = new XMLHttpRequest();
-      
-      // Track upload progress
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = (e.loaded / e.total) * 100;
-          setUploadProgress((prev) => ({
-            ...prev,
-            [fileId]: {
-              loaded: e.loaded,
-              total: e.total,
-              percent: percentComplete,
-            },
-          }));
+    const xhr = new XMLHttpRequest();
+    
+    // Track upload progress
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const percentComplete = (e.loaded / e.total) * 100;
+        setUploadProgress((prev) => ({
+          ...prev,
+          [fileId]: {
+            loaded: e.loaded,
+            total: e.total,
+            percent: percentComplete,
+          },
+        }));
+      }
+    });
+
+    return new Promise((resolve, reject) => {
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const response = JSON.parse(xhr.responseText);
+          resolve(response);
+        } else {
+          reject(new Error(`Upload failed: ${xhr.statusText}`));
         }
-      });
+      };
 
-      return new Promise((resolve, reject) => {
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const response = JSON.parse(xhr.responseText);
-            resolve(response);
-          } else {
-            reject(new Error(`Upload failed: ${xhr.statusText}`));
-          }
-        };
-
-        xhr.onerror = () => reject(new Error('Upload failed'));
-        
-        xhr.open('POST', `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/files/upload`);
-        xhr.send(formData);
-      });
-    } catch (error) {
-      throw error;
-    }
+      xhr.onerror = () => reject(new Error('Upload failed'));
+      
+      xhr.open('POST', `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/files/upload`);
+      xhr.send(formData);
+    });
   };
 
   const handleFiles = async (fileList) => {
@@ -206,7 +203,8 @@ const Sidebar = ({ onFileSelect, selectedFileId }) => {
         await handleFiles(fileList);
       }
     },
-    [onFileSelect]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   );
 
   const handleDeleteFile = async (fileId, event) => {
