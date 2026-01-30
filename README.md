@@ -166,6 +166,15 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
   - Body: `{"text": "Text to find in transcript"}`
 - Q&A responses automatically include timestamps for audio/video files
 
+### Media Playback
+
+- `GET /api/v1/files/{file_id}/playback` - Get media file URL and timestamp for playback
+  - Query param: `timestamp` (optional, in seconds)
+- `POST /api/v1/files/{file_id}/playback` - Get media playback info (POST method)
+  - Body: `{"timestamp": 10.5}` (optional)
+- `GET /api/v1/files/{file_id}/playback/from-timestamp/{start_time}` - Get playback info from specific timestamp
+  - Path param: `start_time` (in seconds)
+
 ### Documentation
 
 - `GET /docs` - Swagger UI documentation (disabled in production)
@@ -500,6 +509,97 @@ You can customize the summarization style using custom prompts:
 - **Executive Summary**: "Create an executive summary highlighting main decisions and recommendations"
 
 The summarization service provides intelligent, concise summaries that capture the essence of your documents and transcripts.
+
+## Media Playback API
+
+The media playback API provides endpoints to get media file URLs and timestamps for frontend media player integration:
+
+### Features
+- **File URL Generation**: Returns URLs to access media files
+- **Timestamp Support**: Includes start timestamp for playback positioning
+- **Formatted Timestamps**: Returns both seconds and formatted time (HH:MM:SS.mmm)
+- **Multiple Endpoints**: GET and POST methods for flexibility
+- **Path-based Timestamp**: Convenient endpoint with timestamp in path
+
+### Usage Example
+
+```bash
+# 1. Get playback info without timestamp (starts at beginning)
+GET /api/v1/files/1/playback
+
+# 2. Get playback info with timestamp (query parameter)
+GET /api/v1/files/1/playback?timestamp=10.5
+
+# 3. Get playback info with timestamp (POST method)
+POST /api/v1/files/1/playback
+{
+  "timestamp": 10.5
+}
+
+# 4. Get playback info from specific timestamp (path parameter)
+GET /api/v1/files/1/playback/from-timestamp/10.5
+
+# Response:
+{
+  "file_id": 1,
+  "file_name": "video.mp4",
+  "file_type": "video",
+  "file_url": "/api/v1/files/1/download",
+  "timestamp": 10.5,
+  "formatted_timestamp": "00:10.500",
+  "mime_type": "video/mp4",
+  "file_size_mb": 25.5
+}
+```
+
+### Frontend Integration
+
+The playback API is designed for easy frontend integration:
+
+```javascript
+// Example: Get playback info and start media player
+const response = await fetch('/api/v1/files/1/playback?timestamp=10.5');
+const playbackInfo = await response.json();
+
+// Use in HTML5 video/audio player
+const video = document.getElementById('video-player');
+video.src = playbackInfo.file_url;
+video.currentTime = playbackInfo.timestamp;
+video.play();
+```
+
+### Integration with Q&A
+
+Combine with Q&A responses for seamless navigation:
+
+```bash
+# 1. Ask a question about audio/video
+POST /api/v1/ask
+{
+  "question": "What was discussed?",
+  "file_id": 1
+}
+
+# Response includes timestamps:
+{
+  "answer": "...",
+  "timestamps": [
+    {
+      "start": 10.5,
+      "end": 25.3,
+      "formatted_start": "00:10.500",
+      "formatted_end": "00:25.300"
+    }
+  ]
+}
+
+# 2. Get playback info for the timestamp
+GET /api/v1/files/1/playback?timestamp=10.5
+
+# 3. Frontend can now start playback at the relevant time
+```
+
+The media playback API enables frontend applications to easily integrate media players with timestamp-based navigation, creating a seamless experience for users to jump to relevant sections in audio/video content.
 
 ## File Storage
 
