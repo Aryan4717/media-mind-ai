@@ -121,10 +121,10 @@ docker-compose build --no-cache
 docker-compose exec backend bash
 
 # Database shell
-docker-compose exec postgres psql -U mediamind -d mediamind
+docker-compose exec postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}
 
 # Redis CLI
-docker-compose exec redis redis-cli -a redis123
+docker-compose exec redis redis-cli -a ${REDIS_PASSWORD}
 ```
 
 ### View resource usage
