@@ -7,7 +7,7 @@ import logging
 
 from app.config.settings import get_settings
 from app.config.database import init_db
-from app.routes import health, files
+from app.routes import health, files, transcription
 
 # Configure logging
 logging.basicConfig(
@@ -55,6 +55,7 @@ app.add_middleware(
 # Include routers
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
 app.include_router(files.router, prefix="/api/v1/files", tags=["Files"])
+app.include_router(transcription.router, prefix="/api/v1", tags=["Transcription"])
 
 
 @app.get("/")

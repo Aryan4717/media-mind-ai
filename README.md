@@ -9,6 +9,8 @@ A production-ready FastAPI backend for an AI-powered document and multimedia Q&A
 - 🔐 Environment variable configuration
 - 🏥 Health check endpoints (health, readiness, liveness)
 - 📤 File upload system (PDF, audio, video) with metadata storage
+- 🎙️ Audio/Video transcription using OpenAI Whisper (API or local)
+- 📝 Timestamped transcription segments with full text
 - 💾 SQLite database with SQLAlchemy async ORM
 - 📂 Structured file storage with organized folders
 - 🌐 CORS middleware support
@@ -105,6 +107,15 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 - `GET /api/v1/files/{file_id}/download` - Download a file by ID
 - `DELETE /api/v1/files/{file_id}` - Delete a file and its metadata
 
+### Transcription Service
+
+- `POST /api/v1/files/{file_id}/transcribe` - Transcribe an audio/video file (synchronous)
+  - Body: `{"language": "en", "task": "transcribe"}` (optional)
+- `POST /api/v1/files/{file_id}/transcribe/async` - Start transcription in background (asynchronous)
+- `GET /api/v1/files/{file_id}/transcription` - Get transcription for a file
+- `GET /api/v1/transcriptions/{transcription_id}` - Get transcription by ID
+- `DELETE /api/v1/transcriptions/{transcription_id}` - Delete a transcription
+
 ### Documentation
 
 - `GET /docs` - Swagger UI documentation (disabled in production)
@@ -125,8 +136,34 @@ The application uses:
 - **FastAPI** for the web framework
 - **SQLAlchemy** with async support for database operations
 - **SQLite** (default) or PostgreSQL for data storage
+- **OpenAI Whisper** for audio/video transcription (local or API)
 - **Pydantic Settings** for configuration management
 - **Uvicorn** as the ASGI server
+
+## Transcription Service
+
+The transcription service supports both OpenAI Whisper API and local Whisper models:
+
+### Using OpenAI Whisper API
+1. Set `OPENAI_API_KEY` in your `.env` file
+2. Set `USE_OPENAI_WHISPER_API=true`
+3. Upload audio/video files and transcribe them
+
+### Using Local Whisper
+1. Install dependencies: `pip install openai-whisper ffmpeg-python`
+2. Install FFmpeg (required for audio processing):
+   - macOS: `brew install ffmpeg`
+   - Ubuntu: `sudo apt-get install ffmpeg`
+   - Windows: Download from [ffmpeg.org](https://ffmpeg.org/download.html)
+3. Set `USE_OPENAI_WHISPER_API=false` (default)
+4. Choose Whisper model: `WHISPER_MODEL=base` (options: tiny, base, small, medium, large)
+
+### Transcription Features
+- **Full text extraction** from audio/video files
+- **Timestamped segments** with start/end times
+- **Language detection** (auto-detect or specify)
+- **Translation support** (translate to English)
+- **Linked to files** in database for easy retrieval
 
 ## File Storage
 
